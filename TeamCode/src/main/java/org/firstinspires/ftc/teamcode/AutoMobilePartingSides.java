@@ -10,13 +10,26 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.SwitchableCamera;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
+import org.firstinspires.ftc.robotcore.external.matrices.VectorF;
+import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackable;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefaultListener;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
 import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
 import org.firstinspires.ftc.robotcore.external.tfod.TFObjectDetector;
 import org.firstinspires.ftc.teamcode.EncoderAndPIDDriveTrain;
 
+import java.util.ArrayList;
 import java.util.List;
+
+import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.DEGREES;
+import static org.firstinspires.ftc.robotcore.external.navigation.AxesOrder.XYZ;
+import static org.firstinspires.ftc.robotcore.external.navigation.AxesOrder.XZY;
+import static org.firstinspires.ftc.robotcore.external.navigation.AxesReference.EXTRINSIC;
 
 //Back up Auton that goes to the wall side of the bridge, and parks there
 
@@ -39,6 +52,41 @@ public class AutoMobilePartingSides extends LinearOpMode {
     EncoderAndPIDDriveTrain drive;
     RevIMU imu;
 
+    private static double shooterSpeed = 0.632;
+    double anglioso = 0;
+    public static double ratioNumber = 1.45;
+    private static double highGoalNumber = 0.6427;
+
+    private WebcamName webcam1, webcam2;
+    private SwitchableCamera switchableCamera;
+
+    // Since ImageTarget trackables use mm to specifiy their dimensions, we must use mm for all the physical dimension.
+    // We will define some constants and conversions here
+    private static final float mmPerInch        = 25.4f;
+    private static final float mmTargetHeight   = (6) * mmPerInch;          // the height of the center of the target image above the floor
+
+    // Constants for perimeter targets
+    private static final float halfField = 72 * mmPerInch;
+    private static final float quadField  = 36 * mmPerInch;
+
+    // Class Members
+    private OpenGLMatrix lastLocation = null;
+    private PIDController pidRotate;
+
+    List<VuforiaTrackable> allTrackables;
+
+    /**
+     * This is the webcam we are to use. As with other hardware devices such as motors and
+     * servos, this device is identified using the robot configuration tool in the FTC application.
+     */
+
+    private boolean targetVisible = false;
+    private float phoneXRotate    = 0;
+    private float phoneYRotate    = 0;
+    private float phoneZRotate    = 0;
+
+    VuforiaTrackables targetsUltimateGoal;
+
     //no. of ticks per one revolution of the yellow jacket motors
     int Ticks_Per_Rev = 1316;
 
@@ -59,7 +107,7 @@ public class AutoMobilePartingSides extends LinearOpMode {
         wobbleGoalClawServo = hardwareMap.get(Servo.class, "Wobble Goal Claw Servo");
         rightIntakeDownServo = hardwareMap.get(Servo.class, "Right Intake Down Servo");
         leftIntakeDownServo = hardwareMap.get(Servo.class, "Left Intake Down Servo");
-        imu = new RevIMU(hardwareMap, "imu");
+        imu = new RevIMU(hardwareMap, "imu 1");
 
         conveyorMotor.setInverted(true);
         elevatorMotor.setInverted(true);
@@ -81,6 +129,58 @@ public class AutoMobilePartingSides extends LinearOpMode {
 
         initVuforia();
         initTfod();
+
+        // Load the data sets for the trackable objects. These particular data
+        // sets are stored in the 'assets' part of our application.
+        targetsUltimateGoal = this.vuforia.loadTrackablesFromAsset("UltimateGoal");
+        VuforiaTrackable blueTowerGoalTarget = targetsUltimateGoal.get(0);
+        blueTowerGoalTarget.setName("Blue Tower Goal Target");
+        VuforiaTrackable redTowerGoalTarget = targetsUltimateGoal.get(1);
+        redTowerGoalTarget.setName("Red Tower Goal Target");
+        VuforiaTrackable redAllianceTarget = targetsUltimateGoal.get(2);
+        redAllianceTarget.setName("Red Alliance Target");
+        VuforiaTrackable blueAllianceTarget = targetsUltimateGoal.get(3);
+        blueAllianceTarget.setName("Blue Alliance Target");
+        VuforiaTrackable frontWallTarget = targetsUltimateGoal.get(4);
+        frontWallTarget.setName("Front Wall Target");
+
+        // For convenience, gather together all the trackable objects in one easily-iterable collection */
+        allTrackables = new ArrayList<VuforiaTrackable>();
+        allTrackables.addAll(targetsUltimateGoal);
+
+        //Set the position of the perimeter targets with relation to origin (center of field)
+        redAllianceTarget.setLocation(OpenGLMatrix
+                .translation(0, -halfField, mmTargetHeight)
+                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 90, 0, 180)));
+
+        blueAllianceTarget.setLocation(OpenGLMatrix
+                .translation(0, halfField, mmTargetHeight)
+                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 90, 0, 0)));
+        frontWallTarget.setLocation(OpenGLMatrix
+                .translation(-halfField, 0, mmTargetHeight)
+                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 90, 0, 90)));
+
+        // The tower goal targets are located a quarter field length from the ends of the back perimeter wall.
+        blueTowerGoalTarget.setLocation(OpenGLMatrix
+                .translation(halfField, quadField, mmTargetHeight)
+                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 90, 0, -90)));
+        redTowerGoalTarget.setLocation(OpenGLMatrix
+                .translation(halfField, -quadField, mmTargetHeight)
+                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 90, 0, -90)));
+        final float CAMERA_FORWARD_DISPLACEMENT  = 4.0f * mmPerInch;   // eg: Camera is 4 Inches in front of robot-center
+        final float CAMERA_VERTICAL_DISPLACEMENT = 2.0f * mmPerInch;   // eg: Camera is 8 Inches above ground
+        final float CAMERA_LEFT_DISPLACEMENT     = 0;     // eg: Camera is ON the robot's center line
+
+        OpenGLMatrix cameraLocationOnRobot = OpenGLMatrix
+                .translation(CAMERA_FORWARD_DISPLACEMENT, CAMERA_LEFT_DISPLACEMENT, CAMERA_VERTICAL_DISPLACEMENT)
+                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XZY, DEGREES, 90, 90, 0));
+
+        /**  Let all the trackable listeners know where the phone is.  */
+        for (VuforiaTrackable trackable : allTrackables) {
+            ((VuforiaTrackableDefaultListener) trackable.getListener()).setCameraLocationOnRobot(webcam2, cameraLocationOnRobot);
+        }
+
+        targetsUltimateGoal.activate();
 
         /**
          * Activate TensorFlow Object Detection before we wait for the start command.
@@ -140,15 +240,57 @@ public class AutoMobilePartingSides extends LinearOpMode {
                 }
             }
 
+            switchableCamera.setActiveCamera(webcam2);
+
             telemetry.addData("Hoip: ", rec);
             telemetry.update();
 
+            rightIntakeDownServo.setPosition(Servo.MAX_POSITION);
+            leftIntakeDownServo.setPosition(Servo.MAX_POSITION);
+
             drive.DriveForwardDistance(2, 11);
             drive.StrafeLeftDistance(2, 15);
+            drive.TurnLeftDistance(2, 3);
+            drive.DriveBackwardDistance(2, 2);
 
-            drive.TurnLeftDistance(2, 2);
-            rightShooterMotor.set(0.631);
-            leftShooterMotor.set(0.631);
+            targetVisible = false;
+            for (VuforiaTrackable trackable : allTrackables) {
+                if (((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible()) {
+                    telemetry.addData("Visible Target", trackable.getName());
+                    targetVisible = true;
+
+                    // getUpdatedRobotLocation() will return null if no new information is available since
+                    // the last time that call was made, or if the trackable is not currently visible.
+                    OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener)trackable.getListener()).getUpdatedRobotLocation();
+                    if (robotLocationTransform != null) {
+                        lastLocation = robotLocationTransform;
+                    }
+                    break;
+                }
+            }
+
+            // Provide feedback as to where the robot is located (if we know).
+            if (targetVisible) {
+                // express position (translation) of robot in inches.
+                VectorF translation = lastLocation.getTranslation();
+                Orientation rotation = Orientation.getOrientation(lastLocation, EXTRINSIC, XYZ, DEGREES);
+
+                double distance = Math.sqrt(Math.pow((translation.get(0) / mmPerInch), 2) + Math.pow((translation.get(1) / mmPerInch), 2));
+                double distanceforspeed = Math.sqrt(Math.pow((translation.get(0)), 2) + Math.pow((translation.get(1)), 2)) / 1000;
+                double highGoalVelocity = Math.sqrt((5.4228 * Math.pow(distanceforspeed, 2)) / (highGoalNumber - 0.3249 * distanceforspeed));
+
+                double speedForHighGoal = Math.abs((highGoalVelocity * 2.23694 - 17.4) / 9.02) - 0.07;
+
+                //anglioso = rotation.thirdAngle - (distance / ratioNumber);
+                //drive.TurnLeftDegrees(0.75, anglioso);
+
+                //Thread.sleep(1000);
+
+                shooterSpeed = speedForHighGoal;
+            }
+
+            rightShooterMotor.set(shooterSpeed);
+            leftShooterMotor.set(shooterSpeed);
             Thread.sleep(1000);
             elevatorMotor.set(1.0);
             conveyorMotor.set(1.0);
@@ -156,7 +298,7 @@ public class AutoMobilePartingSides extends LinearOpMode {
             Thread.sleep(3000);
 
 
-            drive.DriveForwardDistance(1, 11);
+            drive.DriveForwardDistance(1, 16);
 
             rightShooterMotor.set(0);
             leftShooterMotor.set(0);
@@ -182,7 +324,7 @@ public class AutoMobilePartingSides extends LinearOpMode {
                 drive.DriveBackwardDistance(2, 28);
             } else {
                 drive.StrafeLeftDistance(2, 20);
-                drive.TurnLeftDistance(2, 1);
+                drive.TurnLeftDistance(2, 3);
                 drive.DriveBackwardDistance(2,  3);
                 liftWobbleGoalServo.setPower(1.0);
                 Thread.sleep(3000);
@@ -190,6 +332,7 @@ public class AutoMobilePartingSides extends LinearOpMode {
                 liftWobbleGoalServo.setPower(0.0);
             }
         }
+        targetsUltimateGoal.deactivate();
 
         if (tfod != null) {
         tfod.shutdown();
@@ -204,10 +347,16 @@ public class AutoMobilePartingSides extends LinearOpMode {
         VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters();
 
         parameters.vuforiaLicenseKey = VUFORIA_KEY;
-        parameters.cameraName = hardwareMap.get(WebcamName.class, "pog");
+        webcam1 = hardwareMap.get(WebcamName.class, "pog");
+        webcam2 = hardwareMap.get(WebcamName.class, "gamer");
+        parameters.cameraName = ClassFactory.getInstance().getCameraManager().nameForSwitchableCamera(webcam1, webcam2);
+        parameters.maxWebcamAspectRatio = 1920/1080;
 
         //  Instantiate the Vuforia engine
         vuforia = ClassFactory.getInstance().createVuforia(parameters);
+
+        switchableCamera = (SwitchableCamera) vuforia.getCamera();
+        switchableCamera.setActiveCamera(webcam1);
 
         // Loading trackables is not necessary for the TensorFlow Object Detection engine.
     }

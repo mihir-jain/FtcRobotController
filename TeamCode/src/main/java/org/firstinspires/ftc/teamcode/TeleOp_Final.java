@@ -76,9 +76,12 @@ public class TeleOp_Final extends OpMode {
     private double lastAngles = 0;
     private boolean fieldRelativeMode = false;
     private double globalAngle, speed = 0.75;
-    public static double shooterSpeed = 0.632;
+    private static double shooterSpeed = 0.632;
     private boolean hasBeenPushedX = false, hasBeenPushedY = false;
     double anglioso = 0;
+    public static double ratioNumber = 1.45;
+    private static double highGoalNumber = 0.6427;
+    public static double powerGoalNumber = 0.515;
 
     private static final String VUFORIA_KEY =
             "AdK8BJf/////AAABmYCQFYMhCUEGpGiqBsjt6S9yKYcJbGmiZ8d9viFyvxFFTKpiCBwppicoI9FIGnm94cMjowewKG6d+1qKG55H92H6z2NVPrO4tplSO73k3cADtvGj/Zf9ennYyphiQdOJQSty+0MhKTcPUL9BokHQauvZR5v/mmYt+wGaoGuKB6jwprg7XGCR11UvFtafrntEn2p6EMMGy0ctEpA8dMIV0qT4pGi5w6/xve/yBegOt/mBbkaFViA8he6YjJHfS3xAGUShtWhgcPmqeM2c4nkDFfRxRhtBWPIgdc2Wu2Ud/kcw3SHId0DGSOauW6YWVnYGv7FJ5EzCDXYfmttCQEw5P9Rku0RL5um/e6yDNvWbRlmD";
@@ -326,29 +329,45 @@ public class TeleOp_Final extends OpMode {
         if (targetVisible) {
             // express position (translation) of robot in inches.
             VectorF translation = lastLocation.getTranslation();
-            telemetry.addData("Pos (in)", "{X, Y, Z} = %.1f, %.1f, %.1f",
-                    translation.get(0) / mmPerInch, translation.get(1) / mmPerInch, translation.get(2) / mmPerInch);
+//            telemetry.addData("Pos (in)", "{X, Y, Z} = %.1f, %.1f, %.1f",
+//                    translation.get(0) / mmPerInch, translation.get(1) / mmPerInch, translation.get(2) / mmPerInch);
 
             double distance = Math.sqrt(Math.pow((translation.get(0) / mmPerInch), 2) + Math.pow((translation.get(1) / mmPerInch), 2));
-            telemetry.addData("Distance From Thingy McBobby", distance);
+            double distanceforspeed = Math.sqrt(Math.pow((translation.get(0)), 2) + Math.pow((translation.get(1)), 2)) / 1000;
+            double highGoalVelocity = Math.sqrt((5.4228 * Math.pow(distanceforspeed, 2)) / (highGoalNumber - 0.3249 * distanceforspeed));
+            double powerShotVelocity = Math.sqrt((5.4228 * Math.pow(distanceforspeed, 2)) / (powerGoalNumber - 0.3249 * distanceforspeed));
 
-            // express the rotation of the robot in degrees.
-            Orientation rotation = Orientation.getOrientation(lastLocation, EXTRINSIC, XYZ, DEGREES);
-            telemetry.addData("Angle (deg)", "{Roll, Pitch, Heading} = %.0f, %.0f, %.0f", rotation.firstAngle, rotation.secondAngle, rotation.thirdAngle);
+            double speedForHighGoal = Math.abs((highGoalVelocity * 2.23694 - 17.4) / 9.02) - 0.07;
+            double speedForPowerShot = Math.abs((powerShotVelocity * 2.23694 - 17.4) / 9.02);
 
-            telemetry.addData("Ratio", distance / rotation.thirdAngle);
-            if (gamepad1.a)
-                anglioso = - rotation.thirdAngle + (distance / 3.0);
-                telemetry.addData("Angleosing", anglioso);
+            //telemetry.addData("High Goal Shooter Speed", speedForHighGoal);
+            //telemetry.addData("Power Shot Shooter Speed", speedForPowerShot);
+            //telemetry.addData("Distance From Thingy McBobby", distance);
+
+//            if (gamepad1.x) {
+//                shooterSpeed = speedForHighGoal;
+//            } /*else if (gamepad1.y) {
+//                shooterSpeed = speedForPowerShot;
+//            }*/
+//
+////            // express the rotation of the robot in degrees.
+////            Orientation rotation = Orientation.getOrientation(lastLocation, EXTRINSIC, XYZ, DEGREES);
+//////            telemetry.addData("Angle (deg)", "{Roll, Pitch, Heading} = %.0f, %.0f, %.0f", rotation.firstAngle, rotation.secondAngle, rotation.thirdAngle);
+//
+//            telemetry.addData("Ratio", distance / rotation.thirdAngle);
+//            if (gamepad1.a)
+//                anglioso = rotation.thirdAngle - (distance / ratioNumber);
+//                telemetry.addData("Angleosing", anglioso);
+//        }
         }
         else {
             telemetry.addData("Visible Target", "none");
             anglioso = 0;
         }
 
-        if (gamepad1.b && anglioso != 0) {
-            TurnLeftDegrees(0.5, anglioso);
-        }
+//        if (gamepad1.b && anglioso != 0) {
+//            TurnLeftDegrees(0.75, anglioso);
+//        }
 
         //defining the value to get from phones
         double LFPower, LBPower, RFPower, RBPower, xValue, turnValue, yValue;
@@ -358,8 +377,6 @@ public class TeleOp_Final extends OpMode {
             resetAngle();
             fieldRelativeMode = !fieldRelativeMode;
         }*/
-
-        telemetry.addData("FieldRelative?", fieldRelativeMode);
 
         //getting the movement values from the gamepad
         yValue = gamepad1.left_stick_y;
@@ -421,9 +438,9 @@ public class TeleOp_Final extends OpMode {
         //
 
 
-        if (gamepad1.back){
+        if (gamepad1.a || gamepad1.back){
             speed = 0.2;
-        } else if (gamepad1.start){
+        } else {
             speed = 0.75;
         }
 
@@ -454,19 +471,6 @@ public class TeleOp_Final extends OpMode {
             rightIntakeDownServo.setPosition(Servo.MAX_POSITION);
             leftIntakeDownServo.setPosition(Servo.MAX_POSITION);
         }
-//        if (gamepad2.x && !hasBeenPushedX){
-//            shooterSpeed = shooterSpeed - 0.005;
-//            hasBeenPushedX = true;
-//        } else {
-//            hasBeenPushedX = false;
-//        }
-//
-//        if (gamepad2.y && !hasBeenPushedY){
-//            shooterSpeed = shooterSpeed + 0.005;
-//            hasBeenPushedY = true;
-//        } else {
-//            hasBeenPushedY = false;
-//        }
 
         telemetry.addData("Shooter Speed: ", shooterSpeed);
         telemetry.log();
@@ -532,6 +536,7 @@ public class TeleOp_Final extends OpMode {
         pidRotate.setInputRange(0, degrees);
         pidRotate.setOutputRange(0, power);
         pidRotate.setTolerance(1);
+        pidRotate.setContinuous(true);
         pidRotate.enable();
 
         do {
@@ -540,9 +545,7 @@ public class TeleOp_Final extends OpMode {
             LBMotor.motor.setPower(-power);
             RFMotor.motor.setPower(power);
             RBMotor.motor.setPower(power);
-            telemetry.addData("Power", power);
         } while (!pidRotate.onTarget());
-        telemetry.update();
 
         // turn the motors off.
         LFMotor.motor.setPower(0);
