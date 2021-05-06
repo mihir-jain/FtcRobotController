@@ -8,6 +8,7 @@ import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.vuforia.CameraDevice;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.SwitchableCamera;
@@ -54,8 +55,8 @@ public class AutoMobilePartingSides extends LinearOpMode {
 
     private static double shooterSpeed = 0.632;
     double anglioso = 0;
-    public static double ratioNumber = 1.45;
-    private static double highGoalNumber = 0.6427;
+    public static double ratioNumber = 0.1;
+    private static double highGoalNumber = 0.6429;
 
     private WebcamName webcam1, webcam2;
     private SwitchableCamera switchableCamera;
@@ -250,8 +251,9 @@ public class AutoMobilePartingSides extends LinearOpMode {
 
             drive.DriveForwardDistance(2, 11);
             drive.StrafeLeftDistance(2, 15);
-            drive.TurnLeftDistance(2, 3);
-            drive.DriveBackwardDistance(2, 2);
+            drive.TurnLeftDistance(2, 2.8);
+            drive.DriveForwardDistance(2, 15);
+            Thread.sleep(3000);
 
             targetVisible = false;
             for (VuforiaTrackable trackable : allTrackables) {
@@ -269,6 +271,11 @@ public class AutoMobilePartingSides extends LinearOpMode {
                 }
             }
 
+            telemetry.addData("CAN I SEE THE TARGET? The answer has to be ", targetVisible);
+            telemetry.update();
+
+            drive.DriveBackwardDistance(2, 17);
+
             // Provide feedback as to where the robot is located (if we know).
             if (targetVisible) {
                 // express position (translation) of robot in inches.
@@ -281,10 +288,10 @@ public class AutoMobilePartingSides extends LinearOpMode {
 
                 double speedForHighGoal = Math.abs((highGoalVelocity * 2.23694 - 17.4) / 9.02) - 0.07;
 
-                //anglioso = rotation.thirdAngle - (distance / ratioNumber);
+                anglioso = rotation.thirdAngle - (distance / ratioNumber);
                 //drive.TurnLeftDegrees(0.75, anglioso);
 
-                //Thread.sleep(1000);
+                Thread.sleep(1000);
 
                 shooterSpeed = speedForHighGoal;
             }
@@ -313,7 +320,7 @@ public class AutoMobilePartingSides extends LinearOpMode {
                 wobbleGoalClawServo.setPosition(Servo.MIN_POSITION);
                 liftWobbleGoalServo.setPower(0.0);
 
-                drive.StrafeRightDistance(2, 36);
+                drive.StrafeRightDistance(2, 39);
             } else if (rec == "Single") {
                 drive.DriveForwardDistance(2, 23);
                 liftWobbleGoalServo.setPower(1.0);
@@ -321,7 +328,7 @@ public class AutoMobilePartingSides extends LinearOpMode {
                 wobbleGoalClawServo.setPosition(Servo.MIN_POSITION);
                 liftWobbleGoalServo.setPower(0.0);
                 drive.StrafeRightDistance(2, 13);
-                drive.DriveBackwardDistance(2, 28);
+                drive.DriveBackwardDistance(2, 33);
             } else {
                 drive.StrafeLeftDistance(2, 20);
                 drive.TurnLeftDistance(2, 3);

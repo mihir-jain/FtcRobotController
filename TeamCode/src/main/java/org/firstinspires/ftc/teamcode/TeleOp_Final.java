@@ -72,14 +72,14 @@ public class TeleOp_Final extends OpMode {
     private Motor LFMotor, LBMotor, RFMotor, RBMotor, conveyorMotor, elevatorMotor, leftShooterMotor, rightShooterMotor;
     private Servo rightIntakeDownServo, leftIntakeDownServo, wobbleGoalClawServo;
     private CRServo liftWobbleGoalServo;
-    private RevIMU imu;
+    private BNO055IMU imu;
     private double lastAngles = 0;
     private boolean fieldRelativeMode = false;
     private double globalAngle, speed = 0.75;
     private static double shooterSpeed = 0.632;
     private boolean hasBeenPushedX = false, hasBeenPushedY = false;
     double anglioso = 0;
-    public static double ratioNumber = 1.45;
+    public static double ratioNumber = 1.25;
     private static double highGoalNumber = 0.6427;
     public static double powerGoalNumber = 0.515;
 
@@ -135,7 +135,7 @@ public class TeleOp_Final extends OpMode {
         rightIntakeDownServo = hardwareMap.get(Servo.class, "Right Intake Down Servo");
         leftIntakeDownServo = hardwareMap.get(Servo.class, "Left Intake Down Servo");
 
-        imu = new RevIMU(hardwareMap, "imu 1");
+        imu = hardwareMap.get(BNO055IMU.class, "imu 1");
 
         //reversing the motors that need to be reversed, otherwise it sets it as forward
         LFMotor.setInverted(false);
@@ -170,7 +170,7 @@ public class TeleOp_Final extends OpMode {
         parameter.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
         parameter.loggingEnabled = false;
 
-        imu.init(parameter);
+        imu.initialize(parameter);
 
         pidRotate = new PIDController(.003, .00003, 0);
 
@@ -344,30 +344,34 @@ public class TeleOp_Final extends OpMode {
             //telemetry.addData("Power Shot Shooter Speed", speedForPowerShot);
             //telemetry.addData("Distance From Thingy McBobby", distance);
 
-//            if (gamepad1.x) {
-//                shooterSpeed = speedForHighGoal;
-//            } /*else if (gamepad1.y) {
-//                shooterSpeed = speedForPowerShot;
-//            }*/
-//
-////            // express the rotation of the robot in degrees.
-////            Orientation rotation = Orientation.getOrientation(lastLocation, EXTRINSIC, XYZ, DEGREES);
-//////            telemetry.addData("Angle (deg)", "{Roll, Pitch, Heading} = %.0f, %.0f, %.0f", rotation.firstAngle, rotation.secondAngle, rotation.thirdAngle);
-//
-//            telemetry.addData("Ratio", distance / rotation.thirdAngle);
-//            if (gamepad1.a)
-//                anglioso = rotation.thirdAngle - (distance / ratioNumber);
-//                telemetry.addData("Angleosing", anglioso);
-//        }
+            /*else if (gamepad1.y) {
+                shooterSpeed = speedForPowerShot;
+            }*/
+
+//            // express the rotation of the robot in degrees.
+            Orientation rotation = Orientation.getOrientation(lastLocation, EXTRINSIC, XYZ, DEGREES);
+            telemetry.addData("Angle (deg)", "{Roll, Pitch, Heading} = %.0f, %.0f, %.0f", rotation.firstAngle, rotation.secondAngle, rotation.thirdAngle);
+
+            telemetry.addData("Ratio", (translation.get(0) / mmPerInch) / rotation.thirdAngle);
+            if (gamepad1.a) {
+                anglioso = rotation.thirdAngle - ((translation.get(0) / mmPerInch) / ratioNumber);
+                shooterSpeed = speedForHighGoal;
+            }
+            telemetry.addData("Angleosing", anglioso);
         }
         else {
             telemetry.addData("Visible Target", "none");
-            anglioso = 0;
         }
 
-//        if (gamepad1.b && anglioso != 0) {
-//            TurnLeftDegrees(0.75, anglioso);
-//        }
+        if (gamepad1.b && anglioso != 0) {
+            if (anglioso < 0) {
+                TurnLeftDegrees(0.75, -anglioso);
+            } else if (anglioso > 0) {
+                TurnRightDegrees(0.75, anglioso);
+            }
+        }
+
+        telemetry.addData("Current Angle", getAngle());
 
         //defining the value to get from phones
         double LFPower, LBPower, RFPower, RBPower, xValue, turnValue, yValue;
@@ -438,7 +442,7 @@ public class TeleOp_Final extends OpMode {
         //
 
 
-        if (gamepad1.a || gamepad1.back){
+        if (/*gamepad1.a ||*/ gamepad1.back){
             speed = 0.2;
         } else {
             speed = 0.75;
@@ -467,10 +471,10 @@ public class TeleOp_Final extends OpMode {
             conveyorMotor.set(-1.0);
         }
 
-        if (gamepad1.x){
-            rightIntakeDownServo.setPosition(Servo.MAX_POSITION);
-            leftIntakeDownServo.setPosition(Servo.MAX_POSITION);
-        }
+//        if (gamepad1.x){
+//            rightIntakeDownServo.setPosition(Servo.MAX_POSITION);
+//            leftIntakeDownServo.setPosition(Servo.MAX_POSITION);
+//        }
 
         telemetry.addData("Shooter Speed: ", shooterSpeed);
         telemetry.log();
@@ -483,11 +487,11 @@ public class TeleOp_Final extends OpMode {
             wobbleGoalClawServo.setPosition(Servo.MIN_POSITION);
         }
 
-        if (gamepad1.y) {
-            liftWobbleGoalServo.setPower(1.0);
-        } else {
-            liftWobbleGoalServo.setPower(0.0);
-        }
+//        if (gamepad1.y) {
+//            liftWobbleGoalServo.setPower(1.0);
+//        } else {
+//            liftWobbleGoalServo.setPower(0.0);
+//        }
 
         if (gamepad1.right_bumper) {
             elevatorMotor.set(1);
@@ -528,7 +532,6 @@ public class TeleOp_Final extends OpMode {
     public void TurnLeftDegrees(double power, double degrees) {
         resetAngle();
 
-
         if (Math.abs(degrees) > 359) degrees = Math.copySign(359, degrees);
 
         pidRotate.reset();
@@ -536,7 +539,6 @@ public class TeleOp_Final extends OpMode {
         pidRotate.setInputRange(0, degrees);
         pidRotate.setOutputRange(0, power);
         pidRotate.setTolerance(1);
-        pidRotate.setContinuous(true);
         pidRotate.enable();
 
         do {
@@ -561,27 +563,53 @@ public class TeleOp_Final extends OpMode {
     }
 
     public void resetAngle() {
-        imu.reset();
-        lastAngles = 0;
+        lastAngles += globalAngle;
         globalAngle = 0;
     }
 
     //getting the current angle of the IMU
     public double getAngle() {
+        double angles = (double) imu.getAngularOrientation().firstAngle;
 
-        double angles = imu.getAngles()[0];
+        globalAngle = angles - lastAngles;
 
-        double deltaAngle = angles - lastAngles;
-
-        if (deltaAngle < -180)
-            deltaAngle += 360;
-        else if (deltaAngle > 180)
-            deltaAngle -= 360;
-
-        globalAngle += deltaAngle;
-
-        lastAngles = angles;
-
+        globalAngle = ((globalAngle % 360) + 360) % 360;
         return globalAngle;
+    }
+
+    public void TurnRightDegrees(double power, double degrees) {
+        resetAngle();
+
+        degrees = -degrees;
+
+        //if (Math.abs(degrees) > 359) degrees = Math.copySign(359, degrees);
+
+        pidRotate.reset();
+        pidRotate.setSetpoint(degrees);
+        pidRotate.setInputRange(-180, 180);
+        pidRotate.setOutputRange(-power, power);
+        pidRotate.setContinuous(true);
+        pidRotate.setTolerance(1);
+        pidRotate.enable();
+
+        do {
+            power = pidRotate.performPID(getAngle());
+            LFMotor.motor.setPower(-power);
+            LBMotor.motor.setPower(-power);
+            RFMotor.motor.setPower(power);
+            RBMotor.motor.setPower(power);
+        } while (!pidRotate.onTarget());
+
+        // turn the motors off.
+        LFMotor.motor.setPower(0);
+        LBMotor.motor.setPower(0);
+        RFMotor.motor.setPower(0);
+        RBMotor.motor.setPower(0);
+
+        // wait for rotation to stop.
+        //sleep(10000);
+
+        // reset angle tracking on new heading.
+        resetAngle();
     }
 }
