@@ -1,9 +1,9 @@
-package org.firstinspires.ftc.teamcode.Commands;
+package org.firstinspires.ftc.teamcode.Folder.Commands;
 
 import com.arcrobotics.ftclib.command.CommandBase;
 import com.arcrobotics.ftclib.controller.PIDController;
 
-import org.firstinspires.ftc.teamcode.Subsystems.DriveSubsystem;
+import org.firstinspires.ftc.teamcode.Folder.Subsystems.DriveSubsystem;
 
 public class TurningCommand extends CommandBase {
     private final DriveSubsystem m_drive;

@@ -1,8 +1,8 @@
-package org.firstinspires.ftc.teamcode.PurePursuit;
+package org.firstinspires.ftc.teamcode.Folder.PurePursuit;
 
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
-import static org.firstinspires.ftc.teamcode.PurePursuit.MathFunctions.AngleWrap;
+import static org.firstinspires.ftc.teamcode.Folder.PurePursuit.MathFunctions.AngleWrap;
 
 public class RobotMovement {
     public static double[] goToPosition(double x, double y, double movementSpeed, HardwareMap hardwareMap) {

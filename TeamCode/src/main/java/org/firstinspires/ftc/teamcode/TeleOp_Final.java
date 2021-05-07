@@ -18,8 +18,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
-
-
+import com.arcrobotics.ftclib.controller.PIDController;
 
 
 //importing the statements for the code below
@@ -79,9 +78,10 @@ public class TeleOp_Final extends OpMode {
     private static double shooterSpeed = 0.632;
     private boolean hasBeenPushedX = false, hasBeenPushedY = false;
     double anglioso = 0;
-    public static double ratioNumber = 1.25;
-    private static double highGoalNumber = 0.6427;
+    public static double ratioNumber = 1.2;
+    private static double highGoalNumber = 0.64284;
     public static double powerGoalNumber = 0.515;
+    private static double xDistanceAdder = 0;
 
     private static final String VUFORIA_KEY =
             "AdK8BJf/////AAABmYCQFYMhCUEGpGiqBsjt6S9yKYcJbGmiZ8d9viFyvxFFTKpiCBwppicoI9FIGnm94cMjowewKG6d+1qKG55H92H6z2NVPrO4tplSO73k3cADtvGj/Zf9ennYyphiQdOJQSty+0MhKTcPUL9BokHQauvZR5v/mmYt+wGaoGuKB6jwprg7XGCR11UvFtafrntEn2p6EMMGy0ctEpA8dMIV0qT4pGi5w6/xve/yBegOt/mBbkaFViA8he6YjJHfS3xAGUShtWhgcPmqeM2c4nkDFfRxRhtBWPIgdc2Wu2Ud/kcw3SHId0DGSOauW6YWVnYGv7FJ5EzCDXYfmttCQEw5P9Rku0RL5um/e6yDNvWbRlmD";
@@ -99,13 +99,10 @@ public class TeleOp_Final extends OpMode {
     private OpenGLMatrix lastLocation = null;
     private VuforiaLocalizer vuforia = null;
     private PIDController pidRotate;
+    private org.firstinspires.ftc.teamcode.PIDController pidRotateLeft;
 
     List<VuforiaTrackable> allTrackables;
 
-    /**
-     * This is the webcam we are to use. As with other hardware devices such as motors and
-     * servos, this device is identified using the robot configuration tool in the FTC application.
-     */
     WebcamName webcamName = null;
 
     private boolean targetVisible = false;
@@ -173,15 +170,10 @@ public class TeleOp_Final extends OpMode {
         imu.initialize(parameter);
 
         pidRotate = new PIDController(.003, .00003, 0);
+        pidRotateLeft = new org.firstinspires.ftc.teamcode.PIDController(.003, .00003, 0);
 
         webcamName = hardwareMap.get(WebcamName.class, "gamer");
 
-        /*
-         * Configure Vuforia by creating a Parameter object, and passing it to the Vuforia engine.
-         * We can pass Vuforia the handle to a camera preview resource (on the RC screen);
-         * If no camera monitor is desired, use the parameter-less constructor instead (commented out below).
-         * Note: A preview window is required if you want to view the camera stream on the Driver Station Phone.
-         */
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
         VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters(cameraMonitorViewId);
 
@@ -219,24 +211,6 @@ public class TeleOp_Final extends OpMode {
         allTrackables = new ArrayList<VuforiaTrackable>();
         allTrackables.addAll(targetsUltimateGoal);
 
-        /**
-         * In order for localization to work, we need to tell the system where each target is on the field, and
-         * where the phone resides on the robot.  These specifications are in the form of <em>transformation matrices.</em>
-         * Transformation matrices are a central, important concept in the math here involved in localization.
-         * See <a href="https://en.wikipedia.org/wiki/Transformation_matrix">Transformation Matrix</a>
-         * for detailed information. Commonly, you'll encounter transformation matrices as instances
-         * of the {@link OpenGLMatrix} class.
-         *
-         * If you are standing in the Red Alliance Station looking towards the center of the field,
-         *     - The X axis runs from your left to the right. (positive from the center to the right)
-         *     - The Y axis runs from the Red Alliance Station towards the other side of the field
-         *       where the Blue Alliance Station is. (Positive is from the center, towards the BlueAlliance station)
-         *     - The Z axis runs from the floor, upwards towards the ceiling.  (Positive is above the floor)
-         *
-         * Before being transformed, each target image is conceptually located at the origin of the field's
-         *  coordinate system (the center of the field), facing up.
-         */
-
         //Set the position of the perimeter targets with relation to origin (center of field)
         redAllianceTarget.setLocation(OpenGLMatrix
                 .translation(0, -halfField, mmTargetHeight)
@@ -256,25 +230,6 @@ public class TeleOp_Final extends OpMode {
         redTowerGoalTarget.setLocation(OpenGLMatrix
                 .translation(halfField, -quadField, mmTargetHeight)
                 .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 90, 0, -90)));
-
-        //
-        // Create a transformation matrix describing where the phone is on the robot.
-        //
-        // Info:  The coordinate frame for the robot looks the same as the field.
-        // The robot's "forward" direction is facing out along X axis, with the LEFT side facing out along the Y axis.
-        // Z is UP on the robot.  This equates to a bearing angle of Zero degrees.
-        //
-        // For a WebCam, the default starting orientation of the camera is looking UP (pointing in the Z direction),
-        // with the wide (horizontal) axis of the camera aligned with the X axis, and
-        // the Narrow (vertical) axis of the camera aligned with the Y axis
-        //
-        // But, this example assumes that the camera is actually facing forward out the front of the robot.
-        // So, the "default" camera position requires two rotations to get it oriented correctly.
-        // 1) First it must be rotated +90 degrees around the X axis to get it horizontal (it's now facing out the right side of the robot)
-        // 2) Next it must be be rotated +90 degrees (counter-clockwise) around the Z axis to face forward.
-        //
-        // Finally the camera can be translated to its actual mounting position on the robot.
-        //      In this example, it is centered (left to right), but 4" forward of the middle of the robot, and 8" above ground level.
 
         final float CAMERA_FORWARD_DISPLACEMENT  = 4.0f * mmPerInch;   // eg: Camera is 4 Inches in front of robot-center
         final float CAMERA_VERTICAL_DISPLACEMENT = 2.0f * mmPerInch;   // eg: Camera is 8 Inches above ground
@@ -329,47 +284,52 @@ public class TeleOp_Final extends OpMode {
         if (targetVisible) {
             // express position (translation) of robot in inches.
             VectorF translation = lastLocation.getTranslation();
-//            telemetry.addData("Pos (in)", "{X, Y, Z} = %.1f, %.1f, %.1f",
-//                    translation.get(0) / mmPerInch, translation.get(1) / mmPerInch, translation.get(2) / mmPerInch);
+            double updatedX = (translation.get(0) / mmPerInch) - xDistanceAdder;
 
-            double distance = Math.sqrt(Math.pow((translation.get(0) / mmPerInch), 2) + Math.pow((translation.get(1) / mmPerInch), 2));
-            double distanceforspeed = Math.sqrt(Math.pow((translation.get(0)), 2) + Math.pow((translation.get(1)), 2)) / 1000;
+            double distanceforspeed = Math.sqrt(Math.pow((translation.get(0) + xDistanceAdder * mmPerInch), 2) + Math.pow((translation.get(1)), 2)) / 1000;
             double highGoalVelocity = Math.sqrt((5.4228 * Math.pow(distanceforspeed, 2)) / (highGoalNumber - 0.3249 * distanceforspeed));
             double powerShotVelocity = Math.sqrt((5.4228 * Math.pow(distanceforspeed, 2)) / (powerGoalNumber - 0.3249 * distanceforspeed));
 
-            double speedForHighGoal = Math.abs((highGoalVelocity * 2.23694 - 17.4) / 9.02) - 0.07;
-            double speedForPowerShot = Math.abs((powerShotVelocity * 2.23694 - 17.4) / 9.02);
+            double speedForTarget;
 
-            //telemetry.addData("High Goal Shooter Speed", speedForHighGoal);
-            //telemetry.addData("Power Shot Shooter Speed", speedForPowerShot);
-            //telemetry.addData("Distance From Thingy McBobby", distance);
+            if (xDistanceAdder == 0) {
+                speedForTarget  = Math.abs((highGoalVelocity * 2.23694 - 17.4) / 9.02) - 0.07;
+            } else {
+                speedForTarget = Math.abs((powerShotVelocity * 2.23694 - 17.4) / 9.02);
+            }
 
-            /*else if (gamepad1.y) {
-                shooterSpeed = speedForPowerShot;
-            }*/
+//            if (gamepad1.dpad_up) {
+//                xDistanceAdder = 0;
+//            } else if (gamepad1.dpad_right) {
+//                xDistanceAdder = 15.75;
+//            } else if (gamepad1.dpad_down) {
+//                xDistanceAdder = 15.75 + 7.5;
+//            } else if (gamepad1.dpad_left) {
+//                xDistanceAdder = 15.75 + (7.5 * 2);
+//            }
 
-//            // express the rotation of the robot in degrees.
+            // express the rotation of the robot in degrees.
             Orientation rotation = Orientation.getOrientation(lastLocation, EXTRINSIC, XYZ, DEGREES);
             telemetry.addData("Angle (deg)", "{Roll, Pitch, Heading} = %.0f, %.0f, %.0f", rotation.firstAngle, rotation.secondAngle, rotation.thirdAngle);
 
-            telemetry.addData("Ratio", (translation.get(0) / mmPerInch) / rotation.thirdAngle);
-            if (gamepad1.a) {
-                anglioso = rotation.thirdAngle - ((translation.get(0) / mmPerInch) / ratioNumber);
-                shooterSpeed = speedForHighGoal;
-            }
+            telemetry.addData("Ratio", updatedX / rotation.thirdAngle);
+//            if (gamepad1.a) {
+//                anglioso = rotation.thirdAngle - (updatedX / ratioNumber);
+//                shooterSpeed = speedForTarget;
+//            }
             telemetry.addData("Angleosing", anglioso);
         }
         else {
             telemetry.addData("Visible Target", "none");
         }
 
-        if (gamepad1.b && anglioso != 0) {
-            if (anglioso < 0) {
-                TurnLeftDegrees(0.75, -anglioso);
-            } else if (anglioso > 0) {
-                TurnRightDegrees(0.75, anglioso);
-            }
-        }
+//        if (gamepad1.b && anglioso != 0) {
+//            if (anglioso < 0 && xDistanceAdder == 0) {
+//                TurnLeftDegrees(0.75, -anglioso);
+//            } else if (anglioso > 0) {
+//                TurnRightDegrees(0.75, Math.abs(anglioso));
+//            }
+//        }
 
         telemetry.addData("Current Angle", getAngle());
 
@@ -442,7 +402,7 @@ public class TeleOp_Final extends OpMode {
         //
 
 
-        if (/*gamepad1.a ||*/ gamepad1.back){
+        if (gamepad1.a || gamepad1.back){
             speed = 0.2;
         } else {
             speed = 0.75;
@@ -471,10 +431,10 @@ public class TeleOp_Final extends OpMode {
             conveyorMotor.set(-1.0);
         }
 
-//        if (gamepad1.x){
-//            rightIntakeDownServo.setPosition(Servo.MAX_POSITION);
-//            leftIntakeDownServo.setPosition(Servo.MAX_POSITION);
-//        }
+        if (gamepad1.x){
+            rightIntakeDownServo.setPosition(Servo.MAX_POSITION);
+            leftIntakeDownServo.setPosition(Servo.MAX_POSITION);
+        }
 
         telemetry.addData("Shooter Speed: ", shooterSpeed);
         telemetry.log();
@@ -487,11 +447,11 @@ public class TeleOp_Final extends OpMode {
             wobbleGoalClawServo.setPosition(Servo.MIN_POSITION);
         }
 
-//        if (gamepad1.y) {
-//            liftWobbleGoalServo.setPower(1.0);
-//        } else {
-//            liftWobbleGoalServo.setPower(0.0);
-//        }
+        if (gamepad1.y) {
+            liftWobbleGoalServo.setPower(1.0);
+        } else {
+            liftWobbleGoalServo.setPower(0.0);
+        }
 
         if (gamepad1.right_bumper) {
             elevatorMotor.set(1);
@@ -506,7 +466,6 @@ public class TeleOp_Final extends OpMode {
         } else if (gamepad1.dpad_right){
             shooterSpeed = 0.632;
         }
-
 
         //setting the powers for each of the motors
         LBMotor.setRunMode(Motor.RunMode.RawPower);
@@ -532,31 +491,30 @@ public class TeleOp_Final extends OpMode {
     public void TurnLeftDegrees(double power, double degrees) {
         resetAngle();
 
+        degrees += 5;
+
         if (Math.abs(degrees) > 359) degrees = Math.copySign(359, degrees);
 
-        pidRotate.reset();
-        pidRotate.setSetpoint(degrees);
-        pidRotate.setInputRange(0, degrees);
-        pidRotate.setOutputRange(0, power);
-        pidRotate.setTolerance(1);
-        pidRotate.enable();
+        pidRotateLeft.reset();
+        pidRotateLeft.setSetpoint(degrees);
+        pidRotateLeft.setInputRange(0, degrees);
+        pidRotateLeft.setOutputRange(0, power);
+        pidRotateLeft.setTolerance(1);
+        pidRotateLeft.enable();
 
         do {
-            power = pidRotate.performPID(getAngle());
+            power = pidRotateLeft.performPID(getAngle());
             LFMotor.motor.setPower(-power);
             LBMotor.motor.setPower(-power);
             RFMotor.motor.setPower(power);
             RBMotor.motor.setPower(power);
-        } while (!pidRotate.onTarget());
+        } while (!pidRotateLeft.onTarget());
 
         // turn the motors off.
         LFMotor.motor.setPower(0);
         LBMotor.motor.setPower(0);
         RFMotor.motor.setPower(0);
         RBMotor.motor.setPower(0);
-
-        // wait for rotation to stop.
-        //sleep(10000);
 
         // reset angle tracking on new heading.
         resetAngle();
@@ -579,35 +537,28 @@ public class TeleOp_Final extends OpMode {
 
     public void TurnRightDegrees(double power, double degrees) {
         resetAngle();
-
-        degrees = -degrees;
-
-        //if (Math.abs(degrees) > 359) degrees = Math.copySign(359, degrees);
+        //degrees = -degrees;
 
         pidRotate.reset();
-        pidRotate.setSetpoint(degrees);
-        pidRotate.setInputRange(-180, 180);
-        pidRotate.setOutputRange(-power, power);
-        pidRotate.setContinuous(true);
+        pidRotate.setSetPoint(degrees);
+        //pidRotate.setInputRange(degrees, 0);
+        //pidRotate.setOutputRange(0, power);
         pidRotate.setTolerance(1);
-        pidRotate.enable();
+        //pidRotate.enable();
 
         do {
-            power = pidRotate.performPID(getAngle());
+            power = pidRotate.calculate(getAngle());// * damp;
             LFMotor.motor.setPower(-power);
             LBMotor.motor.setPower(-power);
             RFMotor.motor.setPower(power);
             RBMotor.motor.setPower(power);
-        } while (!pidRotate.onTarget());
+        } while (!pidRotate.atSetPoint());// && power < 0);
 
         // turn the motors off.
         LFMotor.motor.setPower(0);
         LBMotor.motor.setPower(0);
         RFMotor.motor.setPower(0);
         RBMotor.motor.setPower(0);
-
-        // wait for rotation to stop.
-        //sleep(10000);
 
         // reset angle tracking on new heading.
         resetAngle();
