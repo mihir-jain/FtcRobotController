@@ -347,7 +347,7 @@ public class EncoderAndPIDDriveTrain {
 
         while (getAngle() == 0) {
             TurnRight(power);
-            sleep(100);
+            sleep(500);
         }
 
         do {

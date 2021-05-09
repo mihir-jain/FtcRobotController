@@ -53,9 +53,9 @@ public class AutoMobilePartingSides extends LinearOpMode {
     EncoderAndPIDDriveTrain drive;
     RevIMU imu;
 
-    private static double shooterSpeed = 0.632;
+    private static double shooterSpeed = 0.63;
     double anglioso = 0;
-    public static double ratioNumber = 0.1;
+    public static double ratioNumber = 1.2;
     private static double highGoalNumber = 0.6429;
 
     private WebcamName webcam1, webcam2;
@@ -251,11 +251,11 @@ public class AutoMobilePartingSides extends LinearOpMode {
 
             drive.DriveForwardDistance(2, 11);
             drive.StrafeLeftDistance(2, 15);
-            drive.TurnLeftDistance(2, 2.8);
-            drive.DriveForwardDistance(2, 15);
-            Thread.sleep(3000);
+            drive.TurnLeftDistance(2, 2.2);
+            //drive.DriveForwardDistance(2, 15);
+            //Thread.sleep(500);
 
-            targetVisible = false;
+            /*targetVisible = false;
             for (VuforiaTrackable trackable : allTrackables) {
                 if (((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible()) {
                     telemetry.addData("Visible Target", trackable.getName());
@@ -272,15 +272,16 @@ public class AutoMobilePartingSides extends LinearOpMode {
             }
 
             telemetry.addData("CAN I SEE THE TARGET? The answer has to be ", targetVisible);
-            telemetry.update();
+            telemetry.update();*/
 
-            drive.DriveBackwardDistance(2, 17);
+            drive.DriveBackwardDistance(2, 5);
 
             // Provide feedback as to where the robot is located (if we know).
-            if (targetVisible) {
+            /*if (targetVisible) {
                 // express position (translation) of robot in inches.
                 VectorF translation = lastLocation.getTranslation();
                 Orientation rotation = Orientation.getOrientation(lastLocation, EXTRINSIC, XYZ, DEGREES);
+                double updatedX = (translation.get(0) / mmPerInch);
 
                 double distance = Math.sqrt(Math.pow((translation.get(0) / mmPerInch), 2) + Math.pow((translation.get(1) / mmPerInch), 2));
                 double distanceforspeed = Math.sqrt(Math.pow((translation.get(0)), 2) + Math.pow((translation.get(1)), 2)) / 1000;
@@ -288,17 +289,24 @@ public class AutoMobilePartingSides extends LinearOpMode {
 
                 double speedForHighGoal = Math.abs((highGoalVelocity * 2.23694 - 17.4) / 9.02) - 0.07;
 
-                anglioso = rotation.thirdAngle - (distance / ratioNumber);
-                //drive.TurnLeftDegrees(0.75, anglioso);
+                anglioso = rotation.thirdAngle - (updatedX / ratioNumber);
+                if (anglioso < 0) {
+                    drive.TurnLeftDegrees(0.75, -anglioso);
+                } else if (anglioso > 0) {
+                    drive.TurnRightDegrees(0.75, anglioso);
+                }
 
-                Thread.sleep(1000);
+                telemetry.addData("hoi, anglioso", anglioso);
+                telemetry.update();
 
-                shooterSpeed = speedForHighGoal;
-            }
+                //Thread.sleep(500);
+
+                //shooterSpeed = speedForHighGoal;
+            }*/
 
             rightShooterMotor.set(shooterSpeed);
             leftShooterMotor.set(shooterSpeed);
-            Thread.sleep(1000);
+            Thread.sleep(1500);
             elevatorMotor.set(1.0);
             conveyorMotor.set(1.0);
             Thread.sleep(1000);

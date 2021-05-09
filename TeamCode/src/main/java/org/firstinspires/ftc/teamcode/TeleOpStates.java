@@ -62,9 +62,8 @@ import static org.firstinspires.ftc.robotcore.external.navigation.AxesOrder.XZY;
 import static org.firstinspires.ftc.robotcore.external.navigation.AxesReference.EXTRINSIC;
 
 @Config
-@TeleOp(name="TeleOp", group="Iterative TeamCode")
-//@Disabled
-public class TeleOp_Final extends OpMode {
+@TeleOp(name="TelehuhuuiuuiuiuOp", group="Iterative TeamCode")
+public class TeleOpStates extends OpMode {
 
     //defining all of the variables needed for the code
     private ElapsedTime runtime = new ElapsedTime();
@@ -75,9 +74,8 @@ public class TeleOp_Final extends OpMode {
     private double lastAngles = 0;
     private boolean fieldRelativeMode = false;
     private double globalAngle, speed = 0.75;
-    private static double shooterSpeed = 0.63;
-    private boolean hasBeenPushedX = false, hasBeenPushedY = false;
-    double anglioso = 0;
+    private static double shooterSpeed = 0.632;
+    private static double anglioso = 0;
     public static double ratioNumber = 1.2;
     private static double highGoalNumber = 0.64284;
     public static double powerGoalNumber = 0.515;
@@ -106,9 +104,6 @@ public class TeleOp_Final extends OpMode {
     WebcamName webcamName = null;
 
     private boolean targetVisible = false;
-    private float phoneXRotate    = 0;
-    private float phoneYRotate    = 0;
-    private float phoneZRotate    = 0;
 
     VuforiaTrackables targetsUltimateGoal;
 
@@ -124,8 +119,6 @@ public class TeleOp_Final extends OpMode {
         elevatorMotor = new Motor(hardwareMap, "Elevator Motor", Motor.GoBILDA.RPM_84);
         leftShooterMotor = new Motor(hardwareMap, "Left Shooter Motor", Motor.GoBILDA.RPM_1150);
         rightShooterMotor = new Motor(hardwareMap, "Right Shooter Motor", Motor.GoBILDA.RPM_1150);
-
-        telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
 
         liftWobbleGoalServo = hardwareMap.crservo.get("Lift Wobble Goal Servo");
         wobbleGoalClawServo = hardwareMap.get(Servo.class, "Wobble Goal Claw Servo");
@@ -177,8 +170,6 @@ public class TeleOp_Final extends OpMode {
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
         VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters(cameraMonitorViewId);
 
-        // VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters();
-
         parameters.vuforiaLicenseKey = VUFORIA_KEY;
 
         /**
@@ -186,7 +177,7 @@ public class TeleOp_Final extends OpMode {
          */
         parameters.cameraName = webcamName;
 
-        parameters.maxWebcamAspectRatio = 1920/1080;//180/720;
+        parameters.maxWebcamAspectRatio = 1920/1080;
         // Make sure extended tracking is disabled for this example.
         parameters.useExtendedTracking = false;
 
@@ -264,7 +255,7 @@ public class TeleOp_Final extends OpMode {
     @Override
     public void loop() {
 
-        /*targetVisible = false;
+        targetVisible = false;
         for (VuforiaTrackable trackable : allTrackables) {
             if (((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible()) {
                 telemetry.addData("Visible Target", trackable.getName());
@@ -298,38 +289,38 @@ public class TeleOp_Final extends OpMode {
                 speedForTarget = Math.abs((powerShotVelocity * 2.23694 - 17.4) / 9.02);
             }
 
-//            if (gamepad1.dpad_up) {
-//                xDistanceAdder = 0;
-//            } else if (gamepad1.dpad_right) {
-//                xDistanceAdder = 15.75;
-//            } else if (gamepad1.dpad_down) {
-//                xDistanceAdder = 15.75 + 7.5;
-//            } else if (gamepad1.dpad_left) {
-//                xDistanceAdder = 15.75 + (7.5 * 2);
-//            }
+            if (gamepad1.dpad_up) {
+                xDistanceAdder = 0;
+            } else if (gamepad1.dpad_right) {
+                xDistanceAdder = 15.75;
+            } else if (gamepad1.dpad_down) {
+                xDistanceAdder = 15.75 + 7.5;
+            } else if (gamepad1.dpad_left) {
+                xDistanceAdder = 15.75 + (7.5 * 2);
+            }
 
             // express the rotation of the robot in degrees.
             Orientation rotation = Orientation.getOrientation(lastLocation, EXTRINSIC, XYZ, DEGREES);
             telemetry.addData("Angle (deg)", "{Roll, Pitch, Heading} = %.0f, %.0f, %.0f", rotation.firstAngle, rotation.secondAngle, rotation.thirdAngle);
 
             telemetry.addData("Ratio", updatedX / rotation.thirdAngle);
-//            if (gamepad1.a) {
-//                anglioso = rotation.thirdAngle - (updatedX / ratioNumber);
-//                shooterSpeed = speedForTarget;
-//            }
+            if (gamepad1.a) {
+                anglioso = rotation.thirdAngle - (updatedX / ratioNumber);
+                shooterSpeed = speedForTarget;
+            }
             telemetry.addData("Angleosing", anglioso);
         }
         else {
             telemetry.addData("Visible Target", "none");
-        }*/
+        }
 
-//        if (gamepad1.b && anglioso != 0) {
-//            if (anglioso < 0 && xDistanceAdder == 0) {
-//                TurnLeftDegrees(0.75, -anglioso);
-//            } else if (anglioso > 0) {
-//                TurnRightDegrees(0.75, Math.abs(anglioso));
-//            }
-//        }
+        if (gamepad1.b && anglioso != 0) {
+            if (anglioso < 0 && xDistanceAdder == 0) {
+                TurnLeftDegrees(0.75, -anglioso);
+            } else if (anglioso > 0) {
+                TurnRightDegrees(0.75, Math.abs(anglioso));
+            }
+        }
 
         telemetry.addData("Current Angle", getAngle());
 
@@ -349,19 +340,12 @@ public class TeleOp_Final extends OpMode {
 
         //changing the values for the field relative mode
         if (fieldRelativeMode){
-            LFMotor.setInverted(true);
-            LBMotor.setInverted(true);
-            RFMotor.setInverted(false);
-            RBMotor.setInverted(false);
-            /*double angle = getAngle();
+            double angle = getAngle();
             double tempX = (xValue * Math.cos(Math.toRadians(angle))) - (yValue * Math.sin(Math.toRadians(angle)));
             yValue = (xValue * Math.sin(Math.toRadians(angle))) + (yValue * Math.cos(Math.toRadians(angle)));
-            xValue = tempX;*/
+            xValue = tempX;
         } else {
-            LFMotor.setInverted(false);
-            LBMotor.setInverted(false);
-            RFMotor.setInverted(true);
-            RBMotor.setInverted(true);
+            //add the thing here
         }
 
         //getting the values for the powers for each motor
@@ -400,8 +384,6 @@ public class TeleOp_Final extends OpMode {
         //need to set up motors, set their inversion factor, set speeds, based on trigger values
         //convereyr is counter, elevator is counter, shooting right is counter and shooting left is clock
         //
-
-
         if (gamepad1.a || gamepad1.back){
             speed = 0.2;
         } else {
@@ -424,7 +406,6 @@ public class TeleOp_Final extends OpMode {
         } else{
             conveyorMotor.set(0.0);
         }
-
 
         //revers converyor and elevator to unstuck smth.
         if (gamepad1.left_bumper){
@@ -454,9 +435,9 @@ public class TeleOp_Final extends OpMode {
         }
 
         if (gamepad1.right_bumper) {
-            elevatorMotor.set(0.75);
+            elevatorMotor.set(1);
         } else if (gamepad1.left_bumper) {
-            elevatorMotor.set(-0.75);
+            elevatorMotor.set(-1);
         } else {
             elevatorMotor.set(0.0);
         }
@@ -464,14 +445,8 @@ public class TeleOp_Final extends OpMode {
         if (gamepad1.dpad_left){
             shooterSpeed = 0.59;
         } else if (gamepad1.dpad_right){
-            shooterSpeed = 0.63;
+            shooterSpeed = 0.632;
         }
-
-        //setting the powers for each of the motors
-        LBMotor.setRunMode(Motor.RunMode.RawPower);
-        LFMotor.setRunMode(Motor.RunMode.RawPower);
-        RFMotor.setRunMode(Motor.RunMode.RawPower);
-        RBMotor.setRunMode(Motor.RunMode.RawPower);
 
         LFMotor.set(Range.clip(LFPower, -speed, speed));
         LBMotor.set(Range.clip(LBPower, -speed, speed));
