@@ -3,33 +3,46 @@ package org.firstinspires.ftc.teamcode;
 // PID controller courtesy of Peter Tischler and WPI, with modifications.
 
 public class PIDControllerCreation {
+    private double m_positionError; //The error in the position of the bot, either transitionally and rotationally.
+    private double m_velocityError; //The error in the velocity of the motor.
+    private final double m_period; //The amount of seconds between when the PID loop is called.
+    private double m_maximumIntegral = 1.0; //The maximum value of the integral, to be multiplied by the kI value.
+    private double m_minimumIntegral = -1.0; //The minimum value of the integral, to be multiplied by the kI value.
+    private double m_maximumInput = 0.0; //The maximum input value when continuous mode in enabled as a method to find the smallest angle needed to move.
+    private double m_minimumInput = 0.0; //The minimum input value when continuous mode in enabled as a method to find the smallest angle needed to move.
+    private boolean m_continuous = false; //When the continuous value is enabled or disabled, to wrap it and find the true smallest distance to move.
+    private double m_P; //The p coefficient to be multiplied by the error.
+    private double m_I; //The i coefficient to be multiplied by integral of the error or the total area under the curve.
+    private double m_D; //The d coefficient to be multiplied by the derivative of the error or the current slope of the tangent line of the graph.
+    private double m_positionTolerance = 0.05; //The overshoot that is allowed in the position to be counted as there.
+    private double m_velocityTolerance = Double.POSITIVE_INFINITY; //The overshoot in the velocity that is allowed for the velocity to be counted as there.
+    private double m_setpoint = 0.0; //Where you need to go in the position, so either the rotation or the translation.
+    private boolean m_enabled = false; //Whether or not the PID controller is enabled. If it isn't, then it is going to return a speed of 0.
+    private double m_prevError = 0.0; //The previous error, or the error that was just there.
+    private double m_totalError = 0.0; //The total error so far, or the area under the curve. This is the integral of the error.
+    private double m_maximumOutput = 1.0; //The maximum output, to be capped if the speed is over this speed.
+    private double m_minimumOutput = -1.0; //The minimum output, to be capped if the speed is under this speed.
+    private double m_measurement; //The current result of the PID output, to be used to see if it is at the target position and velocity
 
-    private double m_positionError;
-    private double m_velocityError;
-    private final double m_period;
-    private double m_maximumIntegral = 1.0;
-    private double m_minimumIntegral = -1.0;
-    private double m_maximumInput = 0.0;
-    private double m_minimumInput = 0.0;
-    private boolean m_continuous = false;
-    private double m_P;
-    private double m_I;
-    private double m_D;
-    private double m_positionTolerance = 0.05;
-    private double m_velocityTolerance = Double.POSITIVE_INFINITY;
-    private double m_setpoint = 0.0;
-    private boolean m_enabled = false;
-    private double m_prevError = 0.0;
-    private double m_totalError = 0.0;
-    private double m_maximumOutput = 1.0;
-    private double m_minimumOutput = -1.0;
-    private double m_measurement;
-
-
+    /**
+     * This initializes the PID, you need to tune and obtain the kp, ki and kd coefficients.
+     *
+     * @param kp This is the proportional coefficient, to be multiplied by the error.
+     * @param ki This is the integral coefficient to be multiplied by integral of the error or the total area under the curve/total error.
+     * @param kd This is the derivative coefficient to be multiplied by the derivative of the error or the current slope of the tangent line of the graph.
+     */
     public PIDControllerCreation(double kp, double ki, double kd) {
         this(kp, ki, kd, 0.02);
     }
 
+    /**
+     * This initializes the PID, you need to tune and obtain the kp, ki and kd coefficients.
+     *
+     * @param kp This is the proportional coefficient, to be multiplied by the error.
+     * @param ki This is the integral coefficient to be multiplied by integral of the error or the total area under the curve/total error.
+     * @param kd This is the derivative coefficient to be multiplied by the derivative of the error or the current slope of the tangent line of the graph.
+     * @param period This is the amount of seconds between when the PID loop is called.
+     */
     public PIDControllerCreation(double kp, double ki, double kd, double period) {
         m_P = kp;
         m_I = ki;
@@ -41,36 +54,78 @@ public class PIDControllerCreation {
         m_period = period;
     }
 
+    /**
+     * This changes the PID coefficients, you need to tune and obtain the kp, ki and kd coefficients.
+     *
+     * @param kp This is the proportional coefficient, to be multiplied by the error.
+     * @param ki This is the integral coefficient to be multiplied by integral of the error or the total area under the curve/total error.
+     * @param kd This is the derivative coefficient to be multiplied by the derivative of the error or the current slope of the tangent line of the graph.
+     */
     public void setPID(double kp, double ki, double kd) {
         m_P = kp;
         m_I = ki;
         m_D = kd;
     }
 
+    /**
+     * This changes the P coefficient, you need to tune and obtain the kp coefficient.
+     *
+     * @param kp This is the proportional coefficient, to be multiplied by the error.
+     */
     public void setP(double kp) {
         m_P = kp;
     }
 
+    /**
+     * This changes the I coefficient, you need to tune and obtain the kd coefficient.
+     *
+     * @param ki This is the integral coefficient to be multiplied by integral of the error or the total area under the curve/total error.
+     */
     public void setI(double ki) {
         m_I = ki;
     }
 
+    /**
+     * This changes the D coefficient, you need to tune and obtain the kd coefficient.
+     *
+     * @param kd This is the derivative coefficient to be multiplied by the derivative of the error or the current slope of the tangent line of the graph.
+     */
     public void setD(double kd) {
         m_D = kd;
     }
 
+    /**
+     * This returns the current P coefficient value.
+     *
+     * @return This returns the proportional coefficient, to be multiplied by the error as a double.
+     */
     public double getP() {
         return m_P;
     }
 
+    /**
+     * This returns the current I coefficient value.
+     *
+     * @return This returns the integral coefficient to be multiplied by integral of the error or the total area under the curve/total error as a double.
+     */
     public double getI() {
         return m_I;
     }
 
+    /**
+     * This returns the current D coefficient value.
+     *
+     * @return This returns the derivative coefficient to be multiplied by the derivative of the error or the current slope of the tangent line of the graph as a double.
+     */
     public double getD() {
         return m_D;
     }
 
+    /**
+     * This returns the current period of the program/
+     *
+     * @return This returns the period, or the amount of seconds between when the PID loop is called as a double.
+     */
     public double getPeriod() {
         return m_period;
     }

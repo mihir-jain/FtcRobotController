@@ -75,7 +75,7 @@ public class TeleOp_Final extends OpMode {
     private double lastAngles = 0;
     private boolean fieldRelativeMode = false;
     private double globalAngle, speed = 0.75;
-    private static double shooterSpeed = 0.63;
+    private static double shooterSpeed = 0.6275;
     private boolean hasBeenPushedX = false, hasBeenPushedY = false;
     double anglioso = 0;
     public static double ratioNumber = 1.2;
@@ -462,9 +462,9 @@ public class TeleOp_Final extends OpMode {
         }
 
         if (gamepad1.dpad_left){
-            shooterSpeed = 0.59;
+            shooterSpeed = 0.57;
         } else if (gamepad1.dpad_right){
-            shooterSpeed = 0.63;
+            shooterSpeed = 0.6275;
         }
 
         //setting the powers for each of the motors

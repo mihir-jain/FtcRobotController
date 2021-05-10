@@ -53,7 +53,7 @@ public class AutoMobilePartingSides extends LinearOpMode {
     EncoderAndPIDDriveTrain drive;
     RevIMU imu;
 
-    private static double shooterSpeed = 0.63;
+    private static double shooterSpeed = 0.6272;
     double anglioso = 0;
     public static double ratioNumber = 1.2;
     private static double highGoalNumber = 0.6429;
