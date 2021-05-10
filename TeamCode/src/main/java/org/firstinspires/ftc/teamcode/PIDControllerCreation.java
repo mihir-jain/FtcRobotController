@@ -22,7 +22,7 @@ public class PIDControllerCreation {
     private double m_totalError = 0.0; //The total error so far, or the area under the curve. This is the integral of the error.
     private double m_maximumOutput = 1.0; //The maximum output, to be capped if the speed is over this speed.
     private double m_minimumOutput = -1.0; //The minimum output, to be capped if the speed is under this speed.
-    private double m_measurement; //The current result of the PID output, to be used to see if it is at the target position and velocity
+    private double m_measurement; //The current position
 
     /**
      * This initializes the PID, you need to tune and obtain the kp, ki and kd coefficients.
@@ -122,7 +122,7 @@ public class PIDControllerCreation {
     }
 
     /**
-     * This returns the current period of the program/
+     * This returns the current period of the program.
      *
      * @return This returns the period, or the amount of seconds between when the PID loop is called as a double.
      */
@@ -130,55 +130,110 @@ public class PIDControllerCreation {
         return m_period;
     }
 
+    /**
+     * This sets the current setpoint for the PID Controller to go to.
+     *
+     * @param setpoint This is the setpoint, or the target velocity / position / angle.
+     */
     public void setSetpoint(double setpoint) {
         m_setpoint = setpoint;
     }
 
+    /**
+     * This gets the current setpoint that the PID Controller is going to.
+     *
+     * @return This returns the setpoint, or the target velocity / position / angle as a double.
+     */
     public double getSetpoint() {
         return m_setpoint;
     }
 
+    /**
+     *
+     * @param minimumInput
+     * @param maximumInput
+     */
     public void enableContinuousInput(double minimumInput, double maximumInput) {
         m_continuous = true;
         m_minimumInput = minimumInput;
         m_maximumInput = maximumInput;
     }
 
+    /**
+     *
+     */
     public void disableContinuousInput() {
         m_continuous = false;
     }
 
+    /**
+     *
+     * @return
+     */
     public boolean isContinuousInputEnabled() {
         return m_continuous;
     }
 
+    /**
+     *
+     * @param minimumIntegral
+     * @param maximumIntegral
+     */
     public void setIntegratorRange(double minimumIntegral, double maximumIntegral) {
         m_maximumIntegral = maximumIntegral;
         m_minimumIntegral = minimumIntegral;
     }
 
+    /**
+     *
+     * @param positionTolerance
+     */
     public void setTolerance(double positionTolerance) {
         this.setTolerance(positionTolerance, Double.POSITIVE_INFINITY);
     }
 
+    /**
+     *
+     * @param positionTolerance
+     * @param velocityTolerance
+     */
     public void setTolerance(double positionTolerance, double velocityTolerance) {
         m_positionTolerance = positionTolerance;
         m_velocityTolerance = velocityTolerance;
     }
 
+    /**
+     *
+     * @return
+     */
     public double getPositionError() {
         return m_positionError;
     }
 
+    /**
+     *
+     * @return
+     */
     public double getVelocityError() {
         return m_velocityError;
     }
 
+    /**
+     *
+     * @param measurement
+     * @param setpoint
+     * @return
+     */
     public double calculate(double measurement, double setpoint) {
         this.setSetpoint(setpoint);
         return this.calculate(measurement);
     }
 
+    /**
+     *
+     * @param measurement
+     * @return
+     */
     public double calculate(double measurement) {
         if (m_enabled) {
             m_measurement = measurement;
@@ -216,12 +271,19 @@ public class PIDControllerCreation {
         }
     }
 
+    /**
+     *
+     */
     public void reset() {
         this.disable();
         m_prevError = 0;
         m_totalError = 0;
     }
 
+    /**
+     *
+     * @return
+     */
     public boolean atSetpoint() {
         double positionError;
         if (m_continuous) {
@@ -238,19 +300,37 @@ public class PIDControllerCreation {
 
     }
 
+    /**
+     *
+     * @param minimumOutput
+     * @param maximumOutput
+     */
     public void setOutputRange(double minimumOutput, double maximumOutput) {
         m_minimumOutput = minimumOutput;
         m_maximumOutput = maximumOutput;
     }
 
+    /**
+     *
+     */
     public void enable() {
         m_enabled = true;
     }
 
+    /**
+     *
+     */
     public void disable() {
         m_enabled = false;
     }
 
+    /**
+     *
+     * @param input
+     * @param minimumInput
+     * @param maximumInput
+     * @return
+     */
     public static double inputModulus(double input, double minimumInput, double maximumInput) {
         double modulus = maximumInput - minimumInput;
 
@@ -265,6 +345,13 @@ public class PIDControllerCreation {
         return input;
     }
 
+    /**
+     *
+     * @param value
+     * @param low
+     * @param high
+     * @return
+     */
     public static double clamp(double value, double low, double high) {
         return Math.max(low, Math.min(value, high));
     }
