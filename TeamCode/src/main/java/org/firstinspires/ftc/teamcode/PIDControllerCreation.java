@@ -149,9 +149,10 @@ public class PIDControllerCreation {
     }
 
     /**
+     * This allows the ability to have a continuous input, using the minimum and maximum inputs. This allows it to find the smallest distance between two points.
      *
-     * @param minimumInput
-     * @param maximumInput
+     * @param minimumInput This is the minimum input, or the smallest value that an input can have
+     * @param maximumInput This is the maximum input or the largest value that an input can have
      */
     public void enableContinuousInput(double minimumInput, double maximumInput) {
         m_continuous = true;
@@ -160,21 +161,23 @@ public class PIDControllerCreation {
     }
 
     /**
-     *
+     * This disables the continuous input, making it so that it will get the distance between a max and min
      */
     public void disableContinuousInput() {
         m_continuous = false;
     }
 
     /**
+     * This will return if the continuous input has been enabled
      *
-     * @return
+     * @return It will return a boolean stating if the continuous input has been enabled
      */
     public boolean isContinuousInputEnabled() {
         return m_continuous;
     }
 
     /**
+     *
      *
      * @param minimumIntegral
      * @param maximumIntegral
@@ -186,6 +189,7 @@ public class PIDControllerCreation {
 
     /**
      *
+     *
      * @param positionTolerance
      */
     public void setTolerance(double positionTolerance) {
@@ -193,6 +197,7 @@ public class PIDControllerCreation {
     }
 
     /**
+     *
      *
      * @param positionTolerance
      * @param velocityTolerance
@@ -204,6 +209,7 @@ public class PIDControllerCreation {
 
     /**
      *
+     *
      * @return
      */
     public double getPositionError() {
@@ -212,6 +218,7 @@ public class PIDControllerCreation {
 
     /**
      *
+     *
      * @return
      */
     public double getVelocityError() {
@@ -219,6 +226,7 @@ public class PIDControllerCreation {
     }
 
     /**
+     *
      *
      * @param measurement
      * @param setpoint
@@ -230,6 +238,7 @@ public class PIDControllerCreation {
     }
 
     /**
+     *
      *
      * @param measurement
      * @return
@@ -282,6 +291,7 @@ public class PIDControllerCreation {
 
     /**
      *
+     *
      * @return
      */
     public boolean atSetpoint() {
@@ -301,6 +311,7 @@ public class PIDControllerCreation {
     }
 
     /**
+     *
      *
      * @param minimumOutput
      * @param maximumOutput
@@ -326,6 +337,7 @@ public class PIDControllerCreation {
 
     /**
      *
+     *
      * @param input
      * @param minimumInput
      * @param maximumInput
@@ -346,6 +358,7 @@ public class PIDControllerCreation {
     }
 
     /**
+     *
      *
      * @param value
      * @param low
